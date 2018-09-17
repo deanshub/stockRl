@@ -1,0 +1,11 @@
+{
+  "restartable": "rs",
+  "verbose": true,
+  "delay": "300",
+  "execMap": {
+     "js": "babel-node"
+  },
+  "env": {
+    "NODE_ENV": "production"
+  }
+}
