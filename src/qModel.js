@@ -80,7 +80,7 @@ export async function stockTrain(stock) {
 
 function getXsFromStock(stock, windowSize = 50) {
   let xs = []
-  for (let recordIndex = windowSize-1; recordIndex < stock.records.length; recordIndex++) {
+  for (let recordIndex = windowSize; recordIndex < stock.records.length; recordIndex++) {
     xs = xs.concat(stock.records.slice(recordIndex - windowSize, recordIndex))
     xs = xs.concat([0])
   }

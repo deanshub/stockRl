@@ -8,8 +8,9 @@
     "test": "jest"
   },
   "dependencies": {
-    "@tensorflow/tfjs": "^0.12.7",
-    "@tensorflow/tfjs-core": "^0.12.18",
+    "@tensorflow/tfjs": "^0.13.0",
+    "@tensorflow/tfjs-core": "^0.13.2",
+    "@tensorflow/tfjs-node-gpu": "^0.1.17",
     "config": "^1.30.0",
     "moment": "^2.22.1",
     "yahoo-stocks": "^2.0.4"

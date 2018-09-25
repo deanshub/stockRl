@@ -1,5 +1,6 @@
+import path from 'path'
 import * as tf from '@tensorflow/tfjs'
-import '@tensorflow/tfjs-node'
+import '@tensorflow/tfjs-node-gpu'
 
 const getActionIndex = (action) => {
   if (action==='BUY') return [0,1]
@@ -62,7 +63,12 @@ export default class Agent {
     return model
   }
 
-  async trainModel(trainingData, epochs = 100, verbose = false) {
+  async trainModel(trainingData, epochs = 300, verbose = false) {
+    // const modelsDir = path.join(__dirname,'models')
+    // const stat = await fs.stat(path.join(modelsDir,'model.json'))
+    // if (stat.isFile()){
+    //   return tf.loadModel(`file://${path.join(modelsDir,'model.json')}`)
+    // }
     const xys = trainingData.reduce((resAll, cur) => {
       const xysOfoneBatch = cur.reduce((res, singleStep) => {
         const {prevState, action, reward, state, done} = singleStep
@@ -78,21 +84,28 @@ export default class Agent {
     }, {xs:[], ys:[]})
 
 
-    const xs = xys.xs // scale?
-    const ys = xys.ys // scale?
+    console.log([xys.xs.length/51, 51], xys.ys.length);
+    const xs = tf.tensor2d(xys.xs, [xys.xs.length/51, 51]) // scale?
+    const ys = tf.tensor2d(xys.ys, [xys.ys.length, 2]) // scale?
     const model = this.createModel()
-    console.log([xs.length/51, 51], ys.length);
     // prevState.history.length (windowSize) + prevState.stocksBalance.length (1)
     // tf.tensor2d(xs, [xs.length/51, 51]).print()
     // tf.tensor2d(ys, [ys.length, 1]).print()
-    await model.fit(tf.tensor2d(xs, [xs.length/51, 51]), tf.tensor2d(ys, [ys.length, 2]), { epochs, verbose })
+    await model.fit(xs, ys, { epochs, verbose })
     // await model.fit(tf.tensor2d(Array.from(Array(51*3)).fill(0), [3, 51]), tf.tensor2d([[0,1],[1,0],[1,1]], [3, 2]), { epochs })
+
     console.log('model done fitting');
+    xs.dispose()
+    ys.dispose()
+    // await model.save(`file://${modelsDir}`)
     return model
   }
 
-  async predict(model, xs) {
+  async predict(model, x) {
+    console.log(x.length);
+    const xs = tf.tensor2d(x, [x.length/51, 51]) // scale?
     const prediction = model.predict(xs)
+    xs.dispose()
     // argmax()
     const ys = await prediction.data()
     return ys
