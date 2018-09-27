@@ -3,14 +3,14 @@ import * as tf from '@tensorflow/tfjs'
 import '@tensorflow/tfjs-node-gpu'
 
 const getActionIndex = (action) => {
-  if (action==='BUY') return [0,1]
-  if (action==='STAND') return [1,0]
-  if (action==='SELL') return [1,1]
+  if (action==='BUY') return 1
+  if (action==='STAND') return 2
+  if (action==='SELL') return 3
   throw new Error(`Action "${action}" not implemented`)
 }
 
 export default class Agent {
-  constructor({learningRate = 0.01, goalSteps = 500, scoreRequirement = 50, initialGames = 1000} = {}) {
+  constructor({learningRate = 0.0001, goalSteps = 500, scoreRequirement = 50, initialGames = 100} = {}) {
     this.learningRate = learningRate
     this.goalSteps = goalSteps
     this.scoreRequirement = scoreRequirement
@@ -52,18 +52,19 @@ export default class Agent {
     model.add(tf.layers.dense({ units: 128, activation: 'relu' }))
     model.add(tf.layers.dropout({rate: 0.8}))
 
-    model.add(tf.layers.dense({ units: 2, activation: 'softmax'}))
+    model.add(tf.layers.dense({ units: 3, activation: 'softmax'}))
     // Specify the loss type and optimizer for training.
     model.compile({
       loss: 'categoricalCrossentropy',
-      optimizer: tf.train.adam({learningRate: this.learningRate}),
+      optimizer: tf.train.adam(this.learningRate),
       // optimizer: 'adam',
       metrics: ['accuracy'],
     })
+    console.log('model created')
     return model
   }
 
-  async trainModel(trainingData, epochs = 300, verbose = false) {
+  async trainModel(trainingData, epochs = 1, verbose = false) {
     // const modelsDir = path.join(__dirname,'models')
     // const stat = await fs.stat(path.join(modelsDir,'model.json'))
     // if (stat.isFile()){
@@ -86,29 +87,38 @@ export default class Agent {
 
     console.log([xys.xs.length/51, 51], xys.ys.length);
     const xs = tf.tensor2d(xys.xs, [xys.xs.length/51, 51]) // scale?
-    const ys = tf.tensor2d(xys.ys, [xys.ys.length, 2]) // scale?
+    // const ys = tf.tensor2d(xys.ys, [xys.ys.length, 3]) // scale?
+    const ys = tf.oneHot(tf.tensor1d(xys.ys, 'int32'), 3) // scale?
     const model = this.createModel()
     // prevState.history.length (windowSize) + prevState.stocksBalance.length (1)
     // tf.tensor2d(xs, [xs.length/51, 51]).print()
     // tf.tensor2d(ys, [ys.length, 1]).print()
-    await model.fit(xs, ys, { epochs, verbose })
+    await model.fit(xs, ys, { epochs, verbose: false, callbacks: {
+      onEpochEnd: async (epoch, logs) => {
+        // Plot the loss and accuracy values at the end of every training epoch.
+        if (verbose){
+          console.log(`${epoch}) ${logs.loss}`)
+        }
+      },
+    } })
     // await model.fit(tf.tensor2d(Array.from(Array(51*3)).fill(0), [3, 51]), tf.tensor2d([[0,1],[1,0],[1,1]], [3, 2]), { epochs })
 
-    console.log('model done fitting');
     xs.dispose()
     ys.dispose()
     // await model.save(`file://${modelsDir}`)
+    console.log('model done fitting')
     return model
   }
 
   async predict(model, x) {
-    console.log(x.length);
+    // console.log(x.length);
     const xs = tf.tensor2d(x, [x.length/51, 51]) // scale?
+    // xs.print()
     const prediction = model.predict(xs)
     xs.dispose()
-    // argmax()
-    const ys = await prediction.data()
-    return ys
+    const ys = await prediction.argMax(-1).data()
+    prediction.dispose()
+    return Array.from(ys)
   }
 
   initialPopulation(env, render = false) {
