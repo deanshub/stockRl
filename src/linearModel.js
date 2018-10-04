@@ -1,5 +1,5 @@
 import * as tf from '@tensorflow/tfjs'
-import '@tensorflow/tfjs-node-gpu'
+import '@tensorflow/tfjs-node'
 import {scale} from './utils'
 
 function createModel() {
