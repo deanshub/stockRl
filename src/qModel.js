@@ -83,10 +83,11 @@ export async function stockTrain(stock) {
 function getXsFromStock(stock, windowSize = 50) {
   // return stock.records.map((r,index)=>diffPercentage((stock.records[index-1]&& stock.records[index-1].close)||r.close, r.close)).slice(0, windowSize).concat([0])
   const recordsPchange = stock.records.map((r,index)=>diffPercentage((stock.records[index-1]&& stock.records[index-1].close)||r.close, r.close))
-  let xs = []
+  const xs = []
   for (let recordIndex = windowSize; recordIndex < recordsPchange.length; recordIndex++) {
-    xs = xs.concat(recordsPchange.slice(recordIndex - windowSize, recordIndex))
-    xs = xs.concat([0])
+    xs.push(recordsPchange.slice(recordIndex - windowSize, recordIndex))
+    // xs = xs.concat(recordsPchange.slice(recordIndex - windowSize, recordIndex))
+    // xs = xs.concat([0])
   }
   return xs
 }
@@ -94,12 +95,29 @@ function getXsFromStock(stock, windowSize = 50) {
 export async function predict(fullModel, stock) {
   const {model, agent} = fullModel
   const xs = getXsFromStock(stock) // 50 days history and balance lenght
-  // console.log(xs);
-  const predictions = await agent.predict(model, xs)
-  return predictions.map(p=>{
-    if (p===1) return 'BUY'
-    if (p===2) return 'STAND'
-    if (p===3) return 'SELL'
+  const {predictions: allPredictions} = await xs.reduce(async(promise, state)=>{
+    const {predictions, lastStockState} = await promise
+    const resulsts = await agent.predict(model, state.concat([lastStockState]))
+    const predictedAction = resulsts[resulsts.length-1]
+    let stockState = lastStockState
+    if (predictedAction===0){
+      console.log('buy')
+      stockState = 1
+    } else if (predictedAction===1){
+      // console.log('stand');
+    } else if (predictedAction===2){
+      console.log('sell')
+      stockState = 0
+    }
+    const newPredictions = predictions.concat([predictedAction])
+    // console.log(`${Math.floor(index/xs.length*100)}%`)
+    return Promise.resolve({predictions:newPredictions, lastStockState: stockState})
+  },Promise.resolve({predictions:[], lastStockState:0}))
+
+  return allPredictions.map(p=>{
+    if (p===0) return 'BUY'
+    if (p===1) return 'STAND'
+    if (p===2) return 'SELL'
     return p
   })
 }

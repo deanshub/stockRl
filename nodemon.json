@@ -2,6 +2,7 @@
   "restartable": "rs",
   "verbose": true,
   "delay": "300",
+  "ignore": ["models/*"],
   "execMap": {
      "js": "babel-node"
   },

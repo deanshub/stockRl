@@ -1,6 +1,6 @@
 import { lookup, history } from 'yahoo-stocks'
 import moment from 'moment'
-import * as linearModel from './linearModel'
+// import * as linearModel from './linearModel'
 import * as qModel from './qModel'
 import {butifyNumber, diffPercentage} from './utils'
 const MODEL_TYPES = {
@@ -54,10 +54,11 @@ async function learnAndPredict(symbol, options, daysToPredict = 3, modelType = M
     moment().add(index, 'days').unix()
   ))
 
-  if (modelType === MODEL_TYPES.LINEAR) {
-    const model = await linearModel.stockTrain(stock)
-    return linearModel.predict(model, predictionsDays)
-  } else if (modelType === MODEL_TYPES.Q) {
+  // if (modelType === MODEL_TYPES.LINEAR) {
+  //   const model = await linearModel.stockTrain(stock)
+  //   return linearModel.predict(model, predictionsDays)
+  // } else
+  if (modelType === MODEL_TYPES.Q) {
     const model = await qModel.stockTrain(stock)
     return qModel.predict(model, stock)
   } else {
@@ -82,7 +83,13 @@ const symbol = 'FB'
 
 async function init() {
   const predictions = await learnAndPredict(symbol, dataOptions, 3, MODEL_TYPES.Q)
-  console.log(predictions);
+  predictions.forEach((act,index)=>{
+    if (act!=='STAND'){
+      console.log(act, index)
+    }
+  })
+  console.log(predictions.length);
+  // console.log(predictions);
   // const data = await getData(symbol, {interval: 'now'})
   // const margins = mapMargins(data.currentPrice, predictions)
   // const underMargin = hasUnderMargin(margins)

@@ -1,16 +1,17 @@
 import path from 'path'
+import fs from 'fs-extra'
 import * as tf from '@tensorflow/tfjs'
-import '@tensorflow/tfjs-node-gpu'
+import '@tensorflow/tfjs-node'
 
 const getActionIndex = (action) => {
-  if (action==='BUY') return 1
-  if (action==='STAND') return 2
-  if (action==='SELL') return 3
+  if (action==='BUY') return 0
+  if (action==='STAND') return 1
+  if (action==='SELL') return 2
   throw new Error(`Action "${action}" not implemented`)
 }
 
 export default class Agent {
-  constructor({learningRate = 0.0001, goalSteps = 500, scoreRequirement = 50, initialGames = 100} = {}) {
+  constructor({learningRate = 0.0001, goalSteps = 500, scoreRequirement = 50, initialGames = 1000} = {}) {
     this.learningRate = learningRate
     this.goalSteps = goalSteps
     this.scoreRequirement = scoreRequirement
@@ -65,11 +66,16 @@ export default class Agent {
   }
 
   async trainModel(trainingData, epochs = 1, verbose = false) {
-    // const modelsDir = path.join(__dirname,'models')
-    // const stat = await fs.stat(path.join(modelsDir,'model.json'))
-    // if (stat.isFile()){
-    //   return tf.loadModel(`file://${path.join(modelsDir,'model.json')}`)
-    // }
+    const modelsDir = path.join(__dirname,'../models')
+    try{
+      const stat = await fs.stat(path.join(modelsDir,'model.json'))
+      if (stat.isFile()){
+        console.log('model loaded')
+        return tf.loadModel(`file://${path.join(modelsDir,'model.json')}`)
+      }
+    }catch(e){
+      console.log(e)
+    }
     const xys = trainingData.reduce((resAll, cur) => {
       const xysOfoneBatch = cur.reduce((res, singleStep) => {
         const {prevState, action, reward, state, done} = singleStep
@@ -97,7 +103,7 @@ export default class Agent {
       onEpochEnd: async (epoch, logs) => {
         // Plot the loss and accuracy values at the end of every training epoch.
         if (verbose){
-          console.log(`${epoch}) ${logs.loss}`)
+          console.log(`${epoch+1}) ${logs.loss}`)
         }
       },
     } })
@@ -105,7 +111,7 @@ export default class Agent {
 
     xs.dispose()
     ys.dispose()
-    // await model.save(`file://${modelsDir}`)
+    await model.save(`file://${modelsDir}`)
     console.log('model done fitting')
     return model
   }
